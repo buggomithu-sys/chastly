@@ -104,7 +104,7 @@ export const campaignsAPI = {
     fetchAPI(`/campaigns/${id}/pause`, { method: "POST" }),
   
   resume: (id: string) =>
-    fetchAPI(`/campaigns/${id}/resume", { method: "POST" }),
+    fetchAPI(`/campaigns/${id}/resume`, { method: "POST" }),
   
   getStats: (id: string) => fetchAPI(`/campaigns/${id}/stats`),
 };
