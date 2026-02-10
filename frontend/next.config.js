@@ -1,0 +1,36 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    appDir: true,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3001/api/:path*',
+      },
+      {
+        source: '/auth/:path*',
+        destination: 'http://localhost:3001/auth/:path*',
+      },
+      {
+        source: '/contacts/:path*',
+        destination: 'http://localhost:3001/contacts/:path*',
+      },
+      {
+        source: '/campaigns/:path*',
+        destination: 'http://localhost:3001/campaigns/:path*',
+      },
+      {
+        source: '/integrations/:path*',
+        destination: 'http://localhost:3001/integrations/:path*',
+      },
+      {
+        source: '/webhooks/:path*',
+        destination: 'http://localhost:3001/webhooks/:path*',
+      },
+    ];
+  },
+};
+
+module.exports = nextConfig;

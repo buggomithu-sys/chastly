@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String?
+  plan         Plan          @default(FREE)
+  dailyQuota   Int           @default(100)
+  contacts     Contact[]
+  campaigns    Campaign[]
+  apiKeys      ApiKey[]
+  integrations Integration[]
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(references: id, fields: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Contact {
+  id          String        @id @default(cuid())
+  userId      String
+  name        String?
+  phone       String? // E.164 format
+  email       String?
+  telegramId  String?
+  tags        String[]
+  status      ContactStatus @default(ACTIVE)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    Message[]
+
+  @@index([userId])
+  @@map("contacts")
+}
+
+model Campaign {
+  id           String          @id @default(cuid())
+  userId       String
+  name         String
+  channel      Channel
+  status       CampaignStatus  @default(DRAFT)
+  template     String // "Hi {name}!"
+  subject      String? // For email
+  tagFilter    String[] // Target tags
+  scheduleType ScheduleType    @default(IMMEDIATE)
+  scheduledAt  DateTime?
+  dailyLimit   Int             @default(50)
+  minDelay     Int             @default(30)
+  maxDelay     Int             @default(120)
+  sentCount    Int             @default(0)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@map("campaigns")
+}
+
+model Message {
+  id            String        @id @default(cuid())
+  campaignId    String
+  contactId     String
+  channel       Channel
+  content       String
+  status        MessageStatus @default(PENDING)
+  externalId    String? // WhatsApp wamid, Twilio SID
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  errorMessage  String?
+  replyReceived Boolean       @default(false)
+  retryCount    Int           @default(0)
+  campaign      Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact       Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([contactId])
+  @@map("messages")
+}
+
+model Integration {
+  id        String   @id @default(cuid())
+  userId    String
+  channel   Channel
+  provider  String // whatsapp_cloud, twilio, telegram_bot, smtp
+  config    String // Encrypted JSON string
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel, provider])
+  @@map("integrations")
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  keyHash     String // SHA-256
+  permissions String[] // ["send:whatsapp"]
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum Channel {
+  WHATSAPP
+  EMAIL
+  TELEGRAM
+  SMS
+}
+
+enum ContactStatus {
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+enum ScheduleType {
+  IMMEDIATE
+  SCHEDULED
+}
+
+enum MessageStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
