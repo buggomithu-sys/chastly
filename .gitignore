@@ -15,6 +15,7 @@ frontend/build/
 .env.local
 .env.*.local
 .env.production
+!.env.production.example
 
 # Database
 *.db
