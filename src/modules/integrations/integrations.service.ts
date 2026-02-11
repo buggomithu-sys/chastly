@@ -32,6 +32,7 @@ export const createIntegrationSchema = z.object({
   channel: z.enum(['WHATSAPP', 'EMAIL', 'TELEGRAM', 'SMS']),
   provider: z.string(),
   config: z.record(z.any()),
+  isActive: z.boolean().optional(),
 });
 
 export type IntegrationInput = z.infer<typeof createIntegrationSchema>;

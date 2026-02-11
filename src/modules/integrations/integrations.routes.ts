@@ -129,7 +129,7 @@ export async function integrationsRoutes(fastify: FastifyInstance) {
 
     try {
       const result = await testIntegration(userId, id);
-      return reply.send({ success: result.success, ...result });
+      return reply.send({ ...result });
     } catch (error: any) {
       return reply.code(400).send({ success: false, error: error.message });
     }

@@ -32,9 +32,9 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
         limit: limit ? parseInt(limit) : 20,
       });
 
-      return reply.send({ success: true, ...result });
+      return reply.send({ ...result, success: true });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -52,7 +52,7 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
       const campaign = await getCampaign(userId, id);
       return reply.send({ success: true, campaign });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -69,7 +69,7 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
       const campaign = await createCampaign(userId, data);
       return reply.code(201).send({ success: true, campaign });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -88,7 +88,7 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
       const campaign = await updateCampaign(userId, id, data);
       return reply.send({ success: true, campaign });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -106,7 +106,7 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
       await deleteCampaign(userId, id);
       return reply.send({ success: true });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -122,9 +122,9 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
 
     try {
       const result = await startCampaign(userId, id);
-      return reply.send({ success: true, ...result });
+      return reply.send({ ...result, success: true });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -140,9 +140,9 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
 
     try {
       const result = await pauseCampaign(userId, id);
-      return reply.send({ success: true, ...result });
+      return reply.send({ ...result, success: true });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -158,9 +158,9 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
 
     try {
       const result = await resumeCampaign(userId, id);
-      return reply.send({ success: true, ...result });
+      return reply.send({ ...result, success: true });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
@@ -178,7 +178,7 @@ export async function campaignsRoutes(fastify: FastifyInstance) {
       const stats = await getCampaignStats(userId, id);
       return reply.send({ success: true, stats });
     } catch (error: any) {
-      return reply.code(400).send({ success: false, error: error.message });
+      return reply.code(400).send({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 }
