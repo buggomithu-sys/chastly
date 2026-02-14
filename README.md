@@ -16,14 +16,14 @@ A powerful WhatsApp, Email, Telegram, and SMS marketing platform built with Next
 ### One-Line Installation (Ubuntu 24.04)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jaspritsinghghuman/becastly/main/install-ubuntu24.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/jaspritsinghghuman/becastly/master/install-ubuntu24.sh | sudo bash
 ```
 
 Or download and run manually:
 
 ```bash
 # 1. Download the installer
-wget https://raw.githubusercontent.com/jaspritsinghghuman/becastly/main/install-ubuntu24.sh
+wget https://raw.githubusercontent.com/jaspritsinghghuman/becastly/master/install-ubuntu24.sh
 
 # 2. Make it executable
 chmod +x install-ubuntu24.sh
