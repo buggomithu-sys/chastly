@@ -19,13 +19,16 @@ A powerful WhatsApp, Email, Telegram, and SMS marketing platform built with Next
 curl -fsSL https://raw.githubusercontent.com/jaspritsinghghuman/becastly/main/install-ubuntu24.sh | sudo bash
 ```
 
-Or manually:
+Or download and run manually:
 
 ```bash
 # 1. Download the installer
 wget https://raw.githubusercontent.com/jaspritsinghghuman/becastly/main/install-ubuntu24.sh
 
-# 2. Run it
+# 2. Make it executable
+chmod +x install-ubuntu24.sh
+
+# 3. Run it
 sudo bash install-ubuntu24.sh
 ```
 
@@ -68,19 +71,26 @@ NEXT_PUBLIC_API_URL=http://your-server-ip
 echo "NEXT_PUBLIC_API_URL=http://your-server-ip" > frontend/.env.production
 ```
 
-#### Step 4: Start Services
+#### Step 4: Create Public Folder
+
+```bash
+mkdir -p frontend/public
+touch frontend/public/.gitkeep
+```
+
+#### Step 5: Start Services
 
 ```bash
 docker-compose up -d
 ```
 
-#### Step 5: Run Database Migrations
+#### Step 6: Run Database Migrations
 
 ```bash
 docker-compose exec api npx prisma migrate deploy
 ```
 
-#### Step 6: Access Application
+#### Step 7: Access Application
 
 Open http://your-server-ip/auth/register in your browser and create your account.
 
@@ -126,7 +136,7 @@ docker-compose down
 | `POSTGRES_DB` | Database name | `becastly` |
 | `ENCRYPTION_KEY` | 32-char hex key for encryption | `a1b2c3d4...` |
 | `APP_URL` | Your server URL | `http://10.0.0.5` |
-| `NEXT_PUBLIC_API_URL` | API URL for browser | `http://10.0.0.5` |
+| `NEXT_PUBLIC_API_URL` | API URL for browser (no /api suffix) | `http://10.0.0.5` |
 
 #### Optional (Integrations)
 
@@ -198,7 +208,6 @@ npm run dev
 ### Backend Development
 
 ```bash
-cd backend
 npm install
 npm run dev
 ```
@@ -217,7 +226,8 @@ becastly/
 │   └── workers/      # Background workers
 ├── prisma/           # Database schema
 ├── nginx/            # Nginx configuration
-└── docker-compose.yml
+├── docker-compose.yml
+└── install-ubuntu24.sh  # One-click installer
 ```
 
 ## Contributing
