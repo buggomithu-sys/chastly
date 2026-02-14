@@ -6,7 +6,6 @@ set -e
 
 REPO_URL="https://github.com/jaspritsinghghuman/becastly.git"
 INSTALL_DIR="/opt/becastly"
-DOMAIN=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -93,11 +92,8 @@ install_docker() {
 install_docker_compose() {
     log "Installing Docker Compose..."
     
-    # Install docker-compose (v1) for compatibility
     curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-    
-    # Create symlink
     ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
     
     success "Docker Compose installed"
@@ -143,7 +139,7 @@ POSTGRES_DB=becastly
 ENCRYPTION_KEY=$ENCRYPTION_KEY
 APP_URL=http://$SERVER_IP
 
-# Frontend API URL (for browser requests)
+# Frontend API URL (for browser requests) - NO /api suffix
 NEXT_PUBLIC_API_URL=http://$SERVER_IP
 
 # Redis Configuration
@@ -184,133 +180,6 @@ EOF
     log "Server IP: $SERVER_IP"
 }
 
-# Fix Docker Compose file
-fix_docker_compose() {
-    log "Fixing Docker Compose configuration..."
-    
-    cd "$INSTALL_DIR"
-    
-    # Remove localhost binding to allow nginx to connect
-    sed -i 's/127.0.0.1:3001:3001/3001:3001/g' docker-compose.yml
-    sed -i 's/127.0.0.1:3000:3000/3000:3000/g' docker-compose.yml
-    
-    success "Docker Compose fixed"
-}
-
-# Fix Frontend Dockerfile
-fix_frontend_dockerfile() {
-    log "Fixing Frontend Dockerfile..."
-    
-    cd "$INSTALL_DIR"
-    
-    cat > frontend/Dockerfile << 'DOCKERFILE'
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
-COPY . .
-RUN npm run build
-
-FROM node:20-alpine
-WORKDIR /app
-RUN apk add --no-cache dumb-init
-ENV NODE_ENV=production
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["npm", "run", "start"]
-DOCKERFILE
-
-    success "Frontend Dockerfile fixed"
-}
-
-# Create Nginx configuration
-create_nginx_config() {
-    log "Creating Nginx configuration..."
-    
-    cd "$INSTALL_DIR"
-    
-    mkdir -p nginx
-    
-    cat > nginx/nginx.conf << 'NGINX'
-user nginx;
-worker_processes auto;
-pid /var/run/nginx.pid;
-
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-    sendfile on;
-    keepalive_timeout 65;
-
-    server {
-        listen 80;
-        server_name _;
-
-        # API routes
-        location /api/ {
-            proxy_pass http://api:3001/;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # Auth API endpoints (POST only)
-        location ~ ^/auth/(register|login|logout|me)$ {
-            if ($request_method ~ ^(POST|PUT|DELETE|PATCH)$) {
-                proxy_pass http://api:3001$request_uri;
-            }
-            proxy_pass http://frontend:3000$request_uri;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # Health check
-        location /health {
-            proxy_pass http://api:3001/health;
-        }
-
-        # Webhooks
-        location /webhooks/ {
-            proxy_pass http://api:3001/webhooks/;
-        }
-
-        # Everything else goes to frontend
-        location / {
-            proxy_pass http://frontend:3000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_cache_bypass $http_upgrade;
-        }
-    }
-}
-NGINX
-
-    success "Nginx configuration created"
-}
-
 # Create public folder for frontend
 create_public_folder() {
     log "Creating public folder..."
@@ -336,7 +205,7 @@ build_and_start() {
     
     # Wait for database to be ready
     log "Waiting for database to be ready..."
-    sleep 10
+    sleep 15
     
     # Run migrations
     log "Running database migrations..."
@@ -395,9 +264,6 @@ main() {
     install_docker_compose
     clone_repo
     create_env
-    fix_docker_compose
-    fix_frontend_dockerfile
-    create_nginx_config
     create_public_folder
     build_and_start
     show_status

@@ -1,192 +1,239 @@
-# Becastly - Multi-Channel Marketing SaaS
+# Becastly - Multi-Channel Marketing Platform
 
-A full-stack SaaS platform for sending marketing campaigns via WhatsApp (Official API), Email (SMTP/Gmail), Telegram Bot, and SMS (Twilio).
+A powerful WhatsApp, Email, Telegram, and SMS marketing platform built with Next.js, Fastify, and Prisma.
 
 ## Features
 
-- **Contact Management**: Import/manage contacts with CSV/Excel support and duplicate detection
-- **Multi-Channel Campaigns**: Send campaigns via WhatsApp, Email, Telegram, and SMS
-- **Scheduling**: Schedule campaigns with daily limits and random delays
-- **Analytics Dashboard**: Track message delivery, opens, and campaign performance
-- **Public API**: Developer-friendly REST API with API key authentication
-- **Anti-Spam**: Auto-unsubscribe handling and compliance features
+- 📱 **Multi-Channel Support**: WhatsApp Business API, Email (SMTP), Telegram Bot, SMS (Twilio)
+- 👥 **Contact Management**: Import, organize, and segment your contacts
+- 📊 **Campaign Management**: Create, schedule, and track marketing campaigns
+- 📈 **Analytics**: Real-time delivery tracking and campaign statistics
+- 🔐 **Secure**: Session-based authentication with encrypted credentials
+- 🎨 **Modern UI**: Built with Tailwind CSS and shadcn/ui
 
-## Tech Stack
+## Quick Start
 
-### Backend
-- Node.js + Fastify + TypeScript
-- PostgreSQL + Prisma ORM
-- BullMQ (Redis) for job queues
-- Lucia Auth for session management
-
-### Frontend
-- Next.js 14 (App Router)
-- Tailwind CSS + shadcn/ui
-- TypeScript
-
-## Prerequisites
-
-- Node.js 18+
-- PostgreSQL 14+
-- Redis 6+
-
-## Setup
-
-### 1. Clone and Install Dependencies
+### One-Line Installation (Ubuntu 24.04)
 
 ```bash
-git clone <repository>
+curl -fsSL https://raw.githubusercontent.com/jaspritsinghghuman/becastly/main/install-ubuntu24.sh | sudo bash
+```
+
+Or manually:
+
+```bash
+# 1. Download the installer
+wget https://raw.githubusercontent.com/jaspritsinghghuman/becastly/main/install-ubuntu24.sh
+
+# 2. Run it
+sudo bash install-ubuntu24.sh
+```
+
+### Manual Installation
+
+#### Prerequisites
+
+- Ubuntu 22.04/24.04 or Debian 11/12
+- Docker & Docker Compose
+- Git
+
+#### Step 1: Clone Repository
+
+```bash
+git clone https://github.com/jaspritsinghghuman/becastly.git
 cd becastly
-npm install
-cd frontend
-npm install
-cd ..
 ```
 
-### 2. Configure Environment Variables
+#### Step 2: Create Environment File
 
-Create `.env` file in the root directory:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your settings:
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/becastly"
-REDIS_URL="redis://localhost:6379"
-ENCRYPTION_KEY="your-32-character-encryption-key"
-
-# Meta/WhatsApp
-META_WEBHOOK_TOKEN="your_webhook_verification_token"
-META_APP_ID="your_meta_app_id"
-META_APP_SECRET="your_meta_app_secret"
-META_PHONE_NUMBER_ID="your_phone_number_id"
-META_ACCESS_TOKEN="your_whatsapp_access_token"
-
-# Twilio
-TWILIO_ACCOUNT_SID="your_twilio_account_sid"
-TWILIO_AUTH_TOKEN="your_twilio_auth_token"
-TWILIO_PHONE_NUMBER="your_twilio_phone_number"
-
-# Telegram
-TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
-
-# Email/SMTP
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="your_email@gmail.com"
-SMTP_PASS="your_app_password"
-
-# App
-APP_URL="http://localhost:3000"
-API_PORT="3001"
+# Required
+POSTGRES_USER=becastly
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=becastly
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+APP_URL=http://your-server-ip
+NEXT_PUBLIC_API_URL=http://your-server-ip
 ```
 
-Create `.env.local` in the frontend directory:
-
-```env
-NEXT_PUBLIC_API_URL="http://localhost:3001"
-```
-
-### 3. Setup Database
+#### Step 3: Create Frontend Environment
 
 ```bash
-npx prisma generate
-npx prisma migrate dev --name init
+echo "NEXT_PUBLIC_API_URL=http://your-server-ip" > frontend/.env.production
 ```
 
-### 4. Run the Application
+#### Step 4: Start Services
 
-**Start Backend & Worker:**
 ```bash
-# Terminal 1: API Server
-npm run dev
-
-# Terminal 2: Worker
-npm run worker
+docker-compose up -d
 ```
 
-**Start Frontend:**
+#### Step 5: Run Database Migrations
+
+```bash
+docker-compose exec api npx prisma migrate deploy
+```
+
+#### Step 6: Access Application
+
+Open http://your-server-ip/auth/register in your browser and create your account.
+
+## Docker Deployment
+
+### Build and Run
+
+```bash
+# Build all services
+docker-compose build
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Nginx | 80, 443 | Reverse proxy |
+| Frontend | 3000 | Next.js application |
+| API | 3001 | Fastify backend API |
+| Worker | - | Background job processor |
+| PostgreSQL | 5432 | Database |
+| Redis | 6379 | Cache & queues |
+
+## Configuration
+
+### Environment Variables
+
+#### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `POSTGRES_USER` | Database username | `becastly` |
+| `POSTGRES_PASSWORD` | Database password | `secure_password` |
+| `POSTGRES_DB` | Database name | `becastly` |
+| `ENCRYPTION_KEY` | 32-char hex key for encryption | `a1b2c3d4...` |
+| `APP_URL` | Your server URL | `http://10.0.0.5` |
+| `NEXT_PUBLIC_API_URL` | API URL for browser | `http://10.0.0.5` |
+
+#### Optional (Integrations)
+
+| Variable | Description |
+|----------|-------------|
+| `META_ACCESS_TOKEN` | WhatsApp Business API token |
+| `META_PHONE_NUMBER_ID` | WhatsApp phone number ID |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token |
+| `SMTP_HOST` | SMTP server host |
+
+### SSL/HTTPS Setup
+
+1. Place your certificates in `nginx/ssl/`:
+   - `cert.pem` - Certificate
+   - `key.pem` - Private key
+
+2. Or use Certbot for Let's Encrypt (configured in docker-compose.yml)
+
+## Troubleshooting
+
+### "Failed to fetch" Error
+
+If registration shows "Failed to fetch":
+
+```bash
+# 1. Check API URL in frontend
+docker-compose exec frontend printenv | grep NEXT_PUBLIC
+
+# 2. Should match your server IP, not localhost
+# If wrong, rebuild:
+echo "NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP" > frontend/.env.production
+docker-compose stop frontend
+docker-compose rm -f frontend
+docker-compose build --no-cache frontend
+docker-compose up -d frontend
+```
+
+### Database Connection Issues
+
+```bash
+# Check database status
+docker-compose logs postgres
+
+# Run migrations manually
+docker-compose exec api npx prisma migrate deploy
+```
+
+### Port Already in Use
+
+```bash
+# Check what's using port 80
+sudo netstat -tulpn | grep :80
+
+# Stop conflicting service or change ports in docker-compose.yml
+```
+
+## Development
+
+### Frontend Development
+
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-The app will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+### Backend Development
 
-## API Documentation
-
-### Authentication
-
-**Register**
-```http
-POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "John Doe"
-}
-```
-
-**Login**
-```http
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-### Public API (API Key Auth)
-
-Include your API key in the Authorization header:
-```http
-Authorization: Bearer bk_your_api_key_here
-```
-
-**Send Single Message**
-```http
-POST /api/v1/messages/send
-Authorization: Bearer bk_xxx
-Content-Type: application/json
-
-{
-  "channel": "WHATSAPP",
-  "to": "+1234567890",
-  "content": "Hello from Becastly!"
-}
+```bash
+cd backend
+npm install
+npm run dev
 ```
 
 ## Project Structure
 
 ```
 becastly/
-├── src/
-│   ├── modules/
-│   │   ├── auth/         # Authentication
-│   │   ├── contacts/     # Contact management
-│   │   ├── campaigns/    # Campaign management
-│   │   ├── messages/     # Message sending
-│   │   ├── integrations/ # Channel integrations
-│   │   └── api/          # Public API
-│   ├── workers/
-│   │   └── campaign.worker.ts  # BullMQ worker
-│   ├── lib/
-│   │   ├── prisma.ts     # Prisma client
-│   │   ├── queue.ts      # BullMQ setup
-│   │   ├── crypto.ts     # Encryption utilities
-│   │   └── auth.ts       # Lucia auth config
-│   └── app.ts            # Fastify app
-├── frontend/
-│   ├── app/              # Next.js app router
-│   ├── components/       # React components
-│   └── lib/              # Frontend utilities
-└── prisma/
-    └── schema.prisma     # Database schema
+├── frontend/          # Next.js frontend
+│   ├── app/          # App router pages
+│   ├── components/   # UI components
+│   └── lib/          # Utilities & API client
+├── src/              # Backend source
+│   ├── routes/       # API routes
+│   ├── services/     # Business logic
+│   └── workers/      # Background workers
+├── prisma/           # Database schema
+├── nginx/            # Nginx configuration
+└── docker-compose.yml
 ```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing`)
+3. Commit your changes (`git commit -m 'Add feature'`)
+4. Push to the branch (`git push origin feature/amazing`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+MIT License - see LICENSE file for details
+
+## Support
+
+- 📧 Email: support@becastly.com
+- 💬 Discord: [Join our community](https://discord.gg/becastly)
+- 📖 Docs: [docs.becastly.com](https://docs.becastly.com)
