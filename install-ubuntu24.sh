@@ -179,6 +179,10 @@ EOF
 NEXT_PUBLIC_API_URL=http://$SERVER_IP
 EOF
 
+    # Fix auth.ts for HTTP (non-HTTPS) deployment
+    log "Configuring authentication for HTTP..."
+    sed -i 's/secure: process.env.NODE_ENV === .production./secure: false,/g' src/lib/auth.ts
+    
     success "Environment configuration created"
     log "Database Password: $DB_PASSWORD"
     log "Encryption Key: $ENCRYPTION_KEY"
