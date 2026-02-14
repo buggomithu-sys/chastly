@@ -68,7 +68,7 @@ install_docker() {
     
     # Add Docker's official GPG key
     install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg || true
     chmod a+r /etc/apt/keyrings/docker.gpg
     
     # Add Docker repository
@@ -77,7 +77,7 @@ install_docker() {
         "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
         tee /etc/apt/sources.list.d/docker.list > /dev/null
     
-    # Install Docker
+    # Install Docker and Docker Compose plugin
     apt-get update
     apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     
@@ -88,15 +88,20 @@ install_docker() {
     success "Docker installed"
 }
 
-# Install Docker Compose (standalone)
-install_docker_compose() {
-    log "Installing Docker Compose..."
+# Setup Docker Compose
+setup_docker_compose() {
+    log "Setting up Docker Compose..."
     
-    curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    # Docker Compose v2 is already installed as plugin
+    # Create alias for convenience (wrapper script)
+    cat > /usr/local/bin/docker-compose << 'EOF'
+#!/bin/bash
+exec docker compose "$@"
+EOF
     chmod +x /usr/local/bin/docker-compose
-    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose 2>/dev/null || true
     
-    success "Docker Compose installed"
+    success "Docker Compose configured"
 }
 
 # Clone repository
@@ -194,14 +199,11 @@ build_and_start() {
     
     cd "$INSTALL_DIR"
     
-    # Pull images
-    docker-compose pull
-    
-    # Build services
-    docker-compose build --no-cache
+    # Build services using docker compose (v2)
+    docker compose build --no-cache
     
     # Start services
-    docker-compose up -d
+    docker compose up -d
     
     # Wait for database to be ready
     log "Waiting for database to be ready..."
@@ -209,11 +211,11 @@ build_and_start() {
     
     # Run migrations
     log "Running database migrations..."
-    docker-compose exec -T api npx prisma migrate dev --name init || true
-    docker-compose exec -T api npx prisma migrate deploy || true
+    docker compose exec -T api npx prisma migrate dev --name init || true
+    docker compose exec -T api npx prisma migrate deploy || true
     
     # Restart API to apply changes
-    docker-compose restart api
+    docker compose restart api
     
     success "Services built and started"
 }
@@ -232,15 +234,15 @@ show_status() {
     echo "   http://$(get_server_ip)/auth/register"
     echo ""
     echo "📊 Service Status:"
-    docker-compose ps
+    docker compose ps
     echo ""
     echo "📁 Installation Directory: $INSTALL_DIR"
     echo ""
     echo "🔧 Useful Commands:"
-    echo "   cd $INSTALL_DIR && docker-compose logs -f    # View logs"
-    echo "   cd $INSTALL_DIR && docker-compose ps         # Check status"
-    echo "   cd $INSTALL_DIR && docker-compose stop       # Stop services"
-    echo "   cd $INSTALL_DIR && docker-compose start      # Start services"
+    echo "   cd $INSTALL_DIR && docker compose logs -f    # View logs"
+    echo "   cd $INSTALL_DIR && docker compose ps         # Check status"
+    echo "   cd $INSTALL_DIR && docker compose stop       # Stop services"
+    echo "   cd $INSTALL_DIR && docker compose start      # Start services"
     echo ""
     echo "⚙️  Configuration File: $INSTALL_DIR/.env"
     echo ""
@@ -261,7 +263,7 @@ main() {
     check_root
     update_system
     install_docker
-    install_docker_compose
+    setup_docker_compose
     clone_repo
     create_env
     create_public_folder
