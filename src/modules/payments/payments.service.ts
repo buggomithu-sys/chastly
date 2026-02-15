@@ -99,7 +99,7 @@ export class PaymentService {
     }
 
     try {
-      const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const orderId = `order_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
 
       const response = await axios.post(
         `${apiUrl}/pg/links`,
@@ -165,7 +165,7 @@ export class PaymentService {
 
     try {
       const crypto = require('crypto');
-      const txnid = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const txnid = `txn_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
       
       const hashString = `${merchantKey}|${txnid}|${request.amount}|${request.description}|${request.metadata?.customerName || 'Customer'}|${request.metadata?.customerEmail}|||||||||||${merchantSalt}`;
       const hash = crypto.createHash('sha512').update(hashString).digest('hex');
@@ -344,7 +344,7 @@ export class PaymentService {
     }
 
     try {
-      const reference = `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const reference = `ref_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
 
       const response = await axios.post(
         `${apiUrl}/paymentLinks`,

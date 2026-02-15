@@ -4,9 +4,10 @@ import Redis from 'ioredis';
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 export class MessageVariationEngine {
-  // Apply spintax: {Hi|Hello|Hey} {name}!
+  // Apply spintax: {{Hi|Hello|Hey}} for variations, {name} for variables
   applySpintax(template: string): string {
-    const regex = /\{([^}]+)\}/g;
+    // Only match double braces for spintax: {{option1|option2}}
+    const regex = /\{\{([^}]+)\}\}/g;
 
     return template.replace(regex, (match, options) => {
       const choices = options.split('|');

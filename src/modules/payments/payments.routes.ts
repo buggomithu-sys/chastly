@@ -92,7 +92,7 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
     const body = request.body as any;
     const signature = request.headers['x-razorpay-signature'] as string;
 
-    // Verify webhook signature (implement in production)
+    // TODO: PRODUCTION - Enable webhook signature verification
     // const crypto = require('crypto');
     // const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET || '')
     //   .update(JSON.stringify(body))
@@ -101,6 +101,9 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
     // if (signature !== expectedSignature) {
     //   return reply.status(400).send({ error: 'Invalid signature' });
     // }
+
+    // WARNING: Webhook signature verification is DISABLED for development
+    // MUST be enabled before production deployment to prevent unauthorized access
 
     try {
       if (body.event === 'payment_link.paid') {
@@ -173,7 +176,7 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
     const body = request.body as any;
     const signature = request.headers['stripe-signature'] as string;
 
-    // Verify webhook signature (implement in production)
+    // TODO: PRODUCTION - Enable webhook signature verification
     // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     // try {
     //   const event = stripe.webhooks.constructEvent(
@@ -184,6 +187,9 @@ const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
     // } catch (err) {
     //   return reply.status(400).send({ error: 'Invalid signature' });
     // }
+
+    // WARNING: Webhook signature verification is DISABLED for development
+    // MUST be enabled before production deployment to prevent fraud
 
     try {
       if (body.type === 'checkout.session.completed') {

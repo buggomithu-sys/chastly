@@ -290,21 +290,19 @@ async function executeCondition(step: any, execution: any, variables: any) {
     });
 
     if (result) {
+      // Condition is true, use true path
       return {
         conditionResult: true,
         nextStepId: branch.trueSteps?.[0] || null,
       };
-    } else {
-      return {
-        conditionResult: false,
-        nextStepId: branch.falseSteps?.[0] || null,
-      };
     }
   }
 
+  // All conditions were false, use false path of last condition
+  const lastBranch = step.conditions?.[step.conditions.length - 1];
   return {
     conditionResult: false,
-    nextStepId: null,
+    nextStepId: lastBranch?.falseSteps?.[0] || null,
   };
 }
 
@@ -415,11 +413,30 @@ export function startWorkflowWorkers() {
   });
 
   // Scheduler - runs every minute to process waiting workflows
-  setInterval(() => {
-    processScheduledWorkflows().catch(err => {
-      console.error('[Workflow Scheduler] Error:', err);
-    });
-  }, 60000); // Every minute
+  // Use setTimeout pattern to avoid overlapping executions
+  let isSchedulerRunning = false;
+
+  const scheduleNext = () => {
+    setTimeout(async () => {
+      if (isSchedulerRunning) {
+        console.warn('[Workflow Scheduler] Previous execution still running, skipping');
+        scheduleNext();
+        return;
+      }
+
+      isSchedulerRunning = true;
+      try {
+        await processScheduledWorkflows();
+      } catch (err) {
+        console.error('[Workflow Scheduler] Error:', err);
+      } finally {
+        isSchedulerRunning = false;
+        scheduleNext();
+      }
+    }, 60000); // Every minute
+  };
+
+  scheduleNext();
 
   console.log('[Workflow Workers] Started');
 }
