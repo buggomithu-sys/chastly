@@ -9,6 +9,8 @@ import { contactsRoutes } from './modules/contacts/contacts.routes';
 import { campaignsRoutes } from './modules/campaigns/campaigns.routes';
 import { integrationsRoutes } from './modules/integrations/integrations.routes';
 import { apiRoutes } from './modules/api/api.routes';
+import workflowsRoutes from './modules/workflows/workflows.routes';
+import paymentsRoutes from './modules/payments/payments.routes';
 import { validateApiKey } from './lib/auth';
 
 // Load environment variables
@@ -57,6 +59,9 @@ async function setupAuth() {
       '/auth/logout',
       '/health',
       '/webhooks/',
+      '/payment/success',
+      '/payment/failure',
+      '/payment/cancel',
     ];
 
     const isPublic = publicRoutes.some(route => 
@@ -111,6 +116,8 @@ async function registerRoutes() {
   app.register(contactsRoutes, { prefix: '/contacts' });
   app.register(campaignsRoutes, { prefix: '/campaigns' });
   app.register(integrationsRoutes, { prefix: '/integrations' });
+  app.register(workflowsRoutes, { prefix: '/api' });
+  app.register(paymentsRoutes, { prefix: '/api' });
   app.register(apiRoutes, { prefix: '/api/v1' });
 
   // Webhooks (public, validated separately)
