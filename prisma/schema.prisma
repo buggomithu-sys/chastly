@@ -8,17 +8,31 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  passwordHash String
-  name         String?
-  plan         Plan          @default(FREE)
-  dailyQuota   Int           @default(100)
-  contacts     Contact[]
-  campaigns    Campaign[]
-  apiKeys      ApiKey[]
-  integrations Integration[]
-  sessions     Session[]
+  id                String              @id @default(cuid())
+  email             String              @unique
+  passwordHash      String
+  name              String?
+  plan              Plan                @default(FREE)
+  dailyQuota        Int                 @default(100)
+  isWhiteLabel      Boolean             @default(false)
+  brandingConfig    String?             // JSON for white-label settings
+  parentUserId      String?             // For reseller sub-accounts
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  contacts          Contact[]
+  campaigns         Campaign[]
+  apiKeys           ApiKey[]
+  integrations      Integration[]
+  sessions          Session[]
+  leads             Lead[]
+  workflows         Workflow[]
+  teamMembers       TeamMember[]
+  quotaTracking     QuotaTracking[]
+  channelReputation ChannelReputation[]
+  payments          PaymentTransaction[]
+  templates         Template[]
+  parentUser        User?               @relation("ResellerHierarchy", fields: [parentUserId], references: [id])
+  subAccounts       User[]              @relation("ResellerHierarchy")
 
   @@map("users")
 }
@@ -34,38 +48,63 @@ model Session {
 }
 
 model Contact {
-  id          String        @id @default(cuid())
-  userId      String
-  name        String?
-  phone       String? // E.164 format
-  email       String?
-  telegramId  String?
-  tags        String[]
-  status      ContactStatus @default(ACTIVE)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages    Message[]
+  id                  String              @id @default(cuid())
+  userId              String
+  name                String?
+  phone               String?             // E.164 format
+  email               String?
+  telegramId          String?
+  tags                String[]
+  status              ContactStatus       @default(ACTIVE)
+  leadScore           Int                 @default(0) // 0-100
+  leadTemperature     LeadTemperature     @default(COLD)
+  lastActivityAt      DateTime?
+  totalInteractions   Int                 @default(0)
+  conversionValue     Float               @default(0)
+  customFields        String?             // JSON for additional data
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages            Message[]
+  conversations       ConversationHistory[]
+  workflowExecutions  WorkflowExecution[]
 
   @@index([userId])
+  @@index([leadScore])
+  @@index([leadTemperature])
   @@map("contacts")
 }
 
 model Campaign {
-  id           String          @id @default(cuid())
-  userId       String
-  name         String
-  channel      Channel
-  status       CampaignStatus  @default(DRAFT)
-  template     String // "Hi {name}!"
-  subject      String? // For email
-  tagFilter    String[] // Target tags
-  scheduleType ScheduleType    @default(IMMEDIATE)
-  scheduledAt  DateTime?
-  dailyLimit   Int             @default(50)
-  minDelay     Int             @default(30)
-  maxDelay     Int             @default(120)
-  sentCount    Int             @default(0)
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages     Message[]
+  id                String               @id @default(cuid())
+  userId            String
+  name              String
+  channel           Channel
+  status            CampaignStatus       @default(DRAFT)
+  template          String               // "Hi {name}!"
+  subject           String?              // For email
+  tagFilter         String[]             // Target tags
+  scheduleType      ScheduleType         @default(IMMEDIATE)
+  scheduledAt       DateTime?
+  dailyLimit        Int                  @default(50)
+  hourlyLimit       Int?                 // New: hourly rate limit
+  perMinuteLimit    Int?                 // New: per-minute rate limit
+  minDelay          Int                  @default(30)
+  maxDelay          Int                  @default(120)
+  sentCount         Int                  @default(0)
+  deliveredCount    Int                  @default(0)
+  failedCount       Int                  @default(0)
+  replyCount        Int                  @default(0)
+  conversionCount   Int                  @default(0)
+  revenue           Float                @default(0)
+  enableAntiSpam    Boolean              @default(true)
+  enableMessageVariation Boolean         @default(false)
+  fallbackChannel   Channel?
+  warmupMode        Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages          Message[]
 
   @@map("campaigns")
 }
@@ -157,4 +196,227 @@ enum MessageStatus {
   SENT
   DELIVERED
   FAILED
+}
+
+// New models for AI-powered features
+
+model Lead {
+  id                String         @id @default(cuid())
+  userId            String
+  name              String?
+  email             String?
+  phone             String?
+  source            String?        // landing_page, form, api
+  intent            String?        // AI-detected intent
+  pagesBrowsed      String[]       // URLs visited
+  timeOnSite        Int            @default(0) // seconds
+  exitIntent        Boolean        @default(false)
+  qualified         Boolean        @default(false)
+  qualificationData String?        // JSON from AI
+  convertedToContact Boolean       @default(false)
+  contactId         String?
+  customData        String?        // JSON
+  createdAt         DateTime       @default(now())
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([qualified])
+  @@map("leads")
+}
+
+model Workflow {
+  id           String              @id @default(cuid())
+  userId       String
+  name         String
+  description  String?
+  isActive     Boolean             @default(false)
+  trigger      String              // JSON: {type: "tag_added", data: {...}}
+  steps        String              // JSON: [{type: "send_email", delay: 2, ...}]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions   WorkflowExecution[]
+
+  @@index([userId])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id            String   @id @default(cuid())
+  workflowId    String
+  contactId     String
+  currentStep   Int      @default(0)
+  status        String   // running, paused, completed, failed
+  stepData      String?  // JSON: execution state per step
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  nextStepAt    DateTime? // When to execute next step
+  workflow      Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contact       Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([contactId])
+  @@index([nextStepAt])
+  @@index([status])
+  @@map("workflow_executions")
+}
+
+model ConversationHistory {
+  id           String   @id @default(cuid())
+  contactId    String
+  channel      Channel
+  direction    String   // inbound, outbound
+  message      String
+  intent       String?  // AI-detected: pricing, objection, buy, stop
+  sentiment    String?  // positive, neutral, negative
+  handoffToHuman Boolean @default(false)
+  agentId      String?  // TeamMember who handled
+  createdAt    DateTime @default(now())
+  contact      Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([createdAt])
+  @@map("conversation_history")
+}
+
+model QuotaTracking {
+  id         String   @id @default(cuid())
+  userId     String
+  channel    Channel
+  date       DateTime @db.Date
+  hourSlot   Int      // 0-23
+  count      Int      @default(0)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel, date, hourSlot])
+  @@index([userId, channel, date])
+  @@map("quota_tracking")
+}
+
+model ChannelReputation {
+  id              String   @id @default(cuid())
+  userId          String
+  channel         Channel
+  identifier      String   // phone number, email domain, sender ID
+  totalSent       Int      @default(0)
+  totalDelivered  Int      @default(0)
+  totalFailed     Int      @default(0)
+  totalBlocked    Int      @default(0)
+  spamComplaints  Int      @default(0)
+  bounceRate      Float    @default(0)
+  reputationScore Int      @default(100) // 0-100
+  warmupPhase     Boolean  @default(true)
+  lastSentAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel, identifier])
+  @@index([userId, channel])
+  @@map("channel_reputation")
+}
+
+model PaymentTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  contactId     String?
+  campaignId    String?
+  amount        Float
+  currency      String   @default("USD")
+  status        String   // pending, completed, failed, refunded
+  provider      String   // stripe, razorpay
+  externalId    String?  // Transaction ID from provider
+  metadata      String?  // JSON
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("payment_transactions")
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  userId      String   // Organization owner
+  email       String
+  name        String?
+  role        TeamRole @default(AGENT)
+  permissions String[] // Specific permissions
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  userId      String?  // null = marketplace template
+  name        String
+  description String?
+  category    String
+  channel     Channel?
+  content     String   // Template content or workflow definition
+  price       Float?   // For marketplace
+  downloads   Int      @default(0)
+  rating      Float?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("templates")
+}
+
+model VoiceCall {
+  id              String   @id @default(cuid())
+  contactId       String?
+  phone           String
+  status          String   // queued, ringing, in-progress, completed, failed
+  duration        Int?     // seconds
+  transcript      String?
+  qualificationScore Int?  // 0-100
+  handoffToWhatsApp Boolean @default(false)
+  recordingUrl    String?
+  externalId      String?  // Twilio Call SID
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([contactId])
+  @@index([status])
+  @@map("voice_calls")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String   // create_campaign, delete_contact, etc.
+  entityType String?  // campaign, contact, etc.
+  entityId   String?
+  metadata   String?  // JSON
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// New enums
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum TeamRole {
+  ADMIN
+  AGENT
+  VIEWER
 }
